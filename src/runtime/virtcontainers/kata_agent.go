@@ -814,12 +814,31 @@ func setupStorages(ctx context.Context, sandbox *Sandbox) []*grpc.Storage {
 			sharedVolume := &grpc.Storage{
 				Driver:     kataVirtioFSDevType,
 				Source:     mountGuestTag,
-				MountPoint: mountPoint,
+				MountPoint: mountPoint + "-virtiofs",
 				Fstype:     typeVirtioFS,
 				Options:    sharedDirVirtioFSOptions,
 			}
 
 			storages = append(storages, sharedVolume)
+			storages = append(storages, &grpc.Storage{
+				Driver:     kataBlkDevType,
+				Source:     "/dev/sda",
+				MountPoint: mountPoint + "-sda",
+				Fstype:     "ext4",
+			})
+			storages = append(storages, &grpc.Storage{
+				Driver:     kataOverlayDevType,
+				Fstype:     typeOverlayFS,
+				Source:     typeOverlayFS,
+				MountPoint: mountPoint,
+				Options: []string{
+					fmt.Sprintf("%s=%s", lowerDir, mountPoint+"-virtiofs"),
+					fmt.Sprintf("%s=%s", lowerDir, mountPoint+"-sda"),
+					fmt.Sprintf("%s=%s", upperDir, mountPoint),
+					fmt.Sprintf("%s=%s", workDir, "/mnt"),
+				},
+			})
+
 		} else {
 			sharedDir9pOptions = append(sharedDir9pOptions, fmt.Sprintf("msize=%d", sandbox.config.HypervisorConfig.Msize9p))
 
